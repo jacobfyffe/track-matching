@@ -68,9 +68,19 @@ The resolver logs a summary on completion: how many plays were newly resolved, t
 ## Roadmap
 
 - **Tier 1 — ISRC exact match.** *(Done.)* Resolves plays to canonical recordings by ISRC.
-- **Tier 2 — Works grouping.** *(Done.)* Groups recordings into works using a version-tag classifier, with a manual-override mechanism for the cases automation can't safely decide.
-- **Tier 2 — Fuzzy match.** *(Next.)* For plays without a resolvable ISRC: normalize artist/title/duration and match on similarity.
-- **Tier 3 — Manual review queue.** Persist human decisions for low-confidence cases.
+- **Tier 2 — Works grouping.** *(Done.)* Groups recordings into works via a version-tag classifier, with manual overrides.
+- **Tier 2 — Fuzzy match.** *(Done.)* For ISRC-less plays: similarity scoring (Levenshtein-based) auto-links confident matches, queues borderline ones for review, and creates new recordings for the rest. Thresholds are tunable in config.
+- **Tier 3 — Manual review workflow.** *(Next.)* Resolve the queued borderline matches. (The queue table and queueing logic exist; the review/resolve CLI is the remaining piece.)
+
+## Fuzzy matching (Tier 2 fallback)
+
+When a play has no resolvable ISRC, it's compared against existing recordings by normalized title + artist similarity (Levenshtein ratio, title weighted 0.7). Group version tags are stripped before comparison; separate tags are kept. Outcomes, by combined score:
+
+- **>= 0.92** (and duration within ±10s): auto-link to the candidate.
+- **0.80–0.92**: queue for manual review (`match_review_queue`) rather than guess.
+- **< 0.80**: create a new ISRC-less recording.
+
+All thresholds are configurable (`FUZZY_AUTO_MATCH`, `FUZZY_REVIEW_FLOOR`, `FUZZY_DURATION_TOLERANCE_MS`). With fully ISRC-covered data this pass simply finds nothing to do — it exists for ISRC-less sources like future Apple Music data.
 
 ## Works grouping (Tier 2)
 

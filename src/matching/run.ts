@@ -1,4 +1,5 @@
 import { runTier1Resolution } from './tier1.js';
+import { runFuzzyMatching } from './fuzzy.js';
 import { runWorksGrouping } from './tier2.js';
 import { getResolutionStats } from './repository.js';
 import { getWorksStats } from './works-repository.js';
@@ -8,10 +9,11 @@ import { log } from '../lib/logger.js';
 /**
  * Entrypoint: run a full resolution pass.
  *
- *   Tier 1 — resolve plays to canonical recordings by ISRC.
- *   Tier 2 — group recordings into works (version-tag rules + manual overrides).
+ *   Tier 1  — resolve plays to canonical recordings by exact ISRC.
+ *   Fuzzy   — resolve ISRC-less plays by similarity (auto-link / queue / create).
+ *   Works   — group recordings into works (version-tag rules + manual overrides).
  *
- * Both are idempotent and safe to re-run on demand.
+ * All stages are idempotent and safe to re-run on demand.
  */
 async function main(): Promise<void> {
   log.info('Starting resolution');
@@ -26,9 +28,12 @@ async function main(): Promise<void> {
     unresolvedRemaining: resolution.totalPlays - resolution.resolvedPlays,
   });
 
+  const fuzzy = await runFuzzyMatching();
+  log.info('Fuzzy matching complete', { ...fuzzy });
+
   const { assigned, pruned } = await runWorksGrouping();
   const works = await getWorksStats();
-  log.info('Tier 2 complete', {
+  log.info('Works grouping complete', {
     recordingsAssigned: assigned,
     emptyWorksPruned: pruned,
     totalWorks: works.works,
