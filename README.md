@@ -70,7 +70,20 @@ The resolver logs a summary on completion: how many plays were newly resolved, t
 - **Tier 1 — ISRC exact match.** *(Done.)* Resolves plays to canonical recordings by ISRC.
 - **Tier 2 — Works grouping.** *(Done.)* Groups recordings into works via a version-tag classifier, with manual overrides.
 - **Tier 2 — Fuzzy match.** *(Done.)* For ISRC-less plays: similarity scoring (Levenshtein-based) auto-links confident matches, queues borderline ones for review, and creates new recordings for the rest. Thresholds are tunable in config.
-- **Tier 3 — Manual review workflow.** *(Next.)* Resolve the queued borderline matches. (The queue table and queueing logic exist; the review/resolve CLI is the remaining piece.)
+- **Tier 3 — Manual review workflow.** *(Done.)* A CLI to resolve the borderline matches the fuzzy matcher queued: confirm (link to the suggestion) or reject (give the play its own recording).
+
+## Review workflow (Tier 3)
+
+Borderline fuzzy matches land in `match_review_queue` instead of being guessed. Work through them with:
+
+```bash
+npm run review list              # show pending items with scores + suggestions
+npm run review confirm 7         # accept the suggested match (method 'manual')
+npm run review reject 7          # give the play its own new recording
+npm run resolve:dev              # re-run so works-grouping picks up changes
+```
+
+With fully ISRC-covered data the queue stays empty — this exists for ISRC-less sources.
 
 ## Fuzzy matching (Tier 2 fallback)
 

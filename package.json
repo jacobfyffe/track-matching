@@ -13,6 +13,7 @@
     "resolve": "node dist/matching/run.js",
     "resolve:dev": "tsx src/matching/run.ts",
     "override": "tsx src/matching/override.ts",
+    "review": "tsx src/matching/review.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts"
   },
