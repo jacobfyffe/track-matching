@@ -1,0 +1,28 @@
+{
+  "name": "track-matching",
+  "version": "0.1.0",
+  "description": "Resolves raw plays into canonical recordings (and later works) for charting. Phase 2 of the music-tracking service.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "migrate": "node dist/db/migrate.js",
+    "migrate:dev": "tsx src/db/migrate.ts",
+    "resolve": "node dist/matching/run.js",
+    "resolve:dev": "tsx src/matching/run.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
