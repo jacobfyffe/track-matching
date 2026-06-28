@@ -1,27 +1,40 @@
 import { runTier1Resolution } from './tier1.js';
+import { runWorksGrouping } from './tier2.js';
 import { getResolutionStats } from './repository.js';
+import { getWorksStats } from './works-repository.js';
 import { closePool } from '../db/pool.js';
 import { log } from '../lib/logger.js';
 
 /**
- * Entrypoint: run a full resolution pass, then report progress.
+ * Entrypoint: run a full resolution pass.
  *
- * For now this is a one-shot batch job you run on demand (npm run resolve:dev).
- * It could later be scheduled or triggered after each ingest, but on-demand is
- * the right starting point — resolution is cheap to re-run and idempotent.
+ *   Tier 1 — resolve plays to canonical recordings by ISRC.
+ *   Tier 2 — group recordings into works (version-tag rules + manual overrides).
+ *
+ * Both are idempotent and safe to re-run on demand.
  */
 async function main(): Promise<void> {
-  log.info('Starting Tier 1 (ISRC) resolution');
+  log.info('Starting resolution');
 
   const newlyResolved = await runTier1Resolution();
-  const stats = await getResolutionStats();
-
-  log.info('Resolution complete', {
+  const resolution = await getResolutionStats();
+  log.info('Tier 1 complete', {
     newlyResolved,
-    resolvedPlays: stats.resolvedPlays,
-    totalPlays: stats.totalPlays,
-    canonicalRecordings: stats.canonicalRecordings,
-    unresolvedRemaining: stats.totalPlays - stats.resolvedPlays,
+    resolvedPlays: resolution.resolvedPlays,
+    totalPlays: resolution.totalPlays,
+    canonicalRecordings: resolution.canonicalRecordings,
+    unresolvedRemaining: resolution.totalPlays - resolution.resolvedPlays,
+  });
+
+  const { assigned, pruned } = await runWorksGrouping();
+  const works = await getWorksStats();
+  log.info('Tier 2 complete', {
+    recordingsAssigned: assigned,
+    emptyWorksPruned: pruned,
+    totalWorks: works.works,
+    recordings: works.recordings,
+    overrides: works.overrides,
+    recordingsCollapsed: works.recordings - works.works,
   });
 }
 

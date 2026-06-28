@@ -12,8 +12,9 @@
     "migrate:dev": "tsx src/db/migrate.ts",
     "resolve": "node dist/matching/run.js",
     "resolve:dev": "tsx src/matching/run.ts",
+    "override": "tsx src/matching/override.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

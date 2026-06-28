@@ -31,7 +31,7 @@ Resolution is **idempotent**: already-resolved plays are skipped, and all writes
 | `src/config` | Typed, validated environment loading. |
 | `src/db` | Connection pool, transaction helper, SQL migration runner. |
 | `src/lib` | Structured logger. |
-| `src/matching` | Data-access layer, the Tier 1 resolver, and the run entrypoint. |
+| `src/matching` | Data-access, Tier 1 resolver, Tier 2 works grouping + classifier, override CLI, and the run entrypoint. |
 
 ## Setup
 
@@ -58,14 +58,38 @@ The resolver logs a summary on completion: how many plays were newly resolved, t
 
 | Command | Description |
 | --- | --- |
-| `npm run resolve:dev` | Run a resolution pass (Tier 1). |
+| `npm run resolve:dev` | Run a full pass: Tier 1 resolution + Tier 2 works grouping. |
+| `npm run override ...` | Make manual work-grouping corrections (list / merge / split). |
 | `npm run migrate:dev` | Apply pending migrations. |
+| `npm test` | Run the classifier unit tests. |
 | `npm run build` | Compile TypeScript to `dist/`. |
 | `npm run typecheck` | Type-check without emitting. |
 
 ## Roadmap
 
-- **Tier 1 — ISRC exact match.** *(Done.)*
-- **Tier 2 — Fuzzy match.** Normalize artist/title/duration; assign recordings to works using version-tag rules (remaster groups with original; live, remix, sped-up, and feat. variants split off).
+- **Tier 1 — ISRC exact match.** *(Done.)* Resolves plays to canonical recordings by ISRC.
+- **Tier 2 — Works grouping.** *(Done.)* Groups recordings into works using a version-tag classifier, with a manual-override mechanism for the cases automation can't safely decide.
+- **Tier 2 — Fuzzy match.** *(Next.)* For plays without a resolvable ISRC: normalize artist/title/duration and match on similarity.
 - **Tier 3 — Manual review queue.** Persist human decisions for low-confidence cases.
-- **Works layer.** Group recordings into songs for charting (Phase 3 consumes this).
+
+## Works grouping (Tier 2)
+
+A **work** is a song for charting; multiple recordings can roll up into one. The classifier derives a normalized "work key" from each recording's title and artist, applying version-tag rules:
+
+- **Group with the original** (tag stripped): Remaster / "YYYY Remaster", Radio Edit, Single Version.
+- **Stay separate** (tag kept): Live, Remix, Sped Up, Slowed, Nightcore, feat./ft.
+- **Unknown tags** (e.g. "(Roles Reversed)", which is part of the real title): kept, so the recording stays separate by default. Safer than wrongly merging.
+- **Precedence:** if any separate/unknown tag is present, the recording stays its own work even if a group tag is also present (a live remaster is still live).
+
+Both the Spotify dash style (`Song - Live`) and the parenthetical style (`Song (Live)`) are handled.
+
+### Manual overrides
+
+Automation can't safely decide every case, so you can override any recording's work assignment. Overrides are consulted before the classifier and persist across re-runs.
+
+```bash
+npm run override list traitor                  # find recording ids
+npm run override merge 42 17 "same song"       # group #42 into #17's work
+npm run override split 88 "wrongly merged"     # make #88 its own work
+npm run resolve:dev                            # re-run to apply
+```
